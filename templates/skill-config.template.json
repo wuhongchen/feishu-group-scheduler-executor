@@ -1,0 +1,52 @@
+{
+  "identity": {
+    "name": "调度虾",
+    "role": "scheduler",
+    "user_id": "",
+    "capabilities": [
+      "调度",
+      "路由"
+    ]
+  },
+  "feishu": {
+    "chat_id": "oc_xxx",
+    "app_id_env": "FEISHU_APP_ID",
+    "app_secret_env": "FEISHU_APP_SECRET",
+    "reply_mode": "thread"
+  },
+  "workers": {
+    "load_balance": "best_score",
+    "pool": [
+      {
+        "name": "代码虾",
+        "user_id": "ou_xxx",
+        "capabilities": [
+          "代码",
+          "Python",
+          "通用"
+        ],
+        "status": "online",
+        "load": 0,
+        "success_rate": 0.95
+      },
+      {
+        "name": "文案虾",
+        "user_id": "ou_yyy",
+        "capabilities": [
+          "文案",
+          "写作",
+          "通用"
+        ],
+        "status": "online",
+        "load": 0,
+        "success_rate": 0.98
+      }
+    ]
+  },
+  "timeouts": {
+    "accept_seconds": 60,
+    "progress_seconds": 300,
+    "complete_seconds": 1800,
+    "max_retry": 3
+  }
+}
