@@ -50,11 +50,23 @@
 
 ## 快速开始
 
+### 0) 一键安装（推荐）
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/wuhongchen/feishu-group-scheduler-executor/main/scripts/install.sh)
+```
+
+可选环境变量：
+
+- `OPENCLAW_SKILLS_DIR`：自定义 skills 安装目录
+- `REPO_BRANCH`：指定安装分支（默认 `main`）
+
 ### 1) 使用模板配置
 
 从模板创建你的配置文件：
 
 - `templates/skill-config.template.json`
+- 安装脚本会自动生成 `config.local.json`（如果不存在）
 
 重点填写：
 

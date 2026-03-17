@@ -208,6 +208,12 @@ minOpenClawVersion: "2.1.0"
 - 飞书开放平台应用（机器人能力、消息读取/发送权限）
 - 推荐将配置放在 `templates/skill-config.template.json` 的衍生文件中
 
+一键安装：
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/wuhongchen/feishu-group-scheduler-executor/main/scripts/install.sh)
+```
+
 示例命令（本地协议演示脚本）：
 
 ```bash
