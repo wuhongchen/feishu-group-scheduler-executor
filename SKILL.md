@@ -24,7 +24,7 @@ capabilities:
 permissions:
   network: true
   filesystem: true
-  shell: false
+  shell: true
   clipboard: false
   env:
     - FEISHU_APP_ID
@@ -200,6 +200,7 @@ minOpenClawVersion: "2.1.0"
 - 对执行者使用真实 `user_id` 的 `<at ...>`，避免“看见消息但未收到提醒”。
 - 对自然语言入口做最小化意图识别，不允许无 ID 的隐式状态改写。
 - 当插件不消费 bot 消息时，不应继续“等待执行者响应”，而应进入 `waiting_relay`。
+- shell 权限仅用于 `scripts/managed-install.sh` 这类受控运维动作，禁止远程脚本直执（如 `curl | bash`）。
 
 ### 输出约定
 
