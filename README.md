@@ -27,6 +27,7 @@
 - **容错机制**：超时重分配、失败重试、取消与归档
 - **群聊治理**：支持 thread 回复策略，减少消息噪声
 - **插件受限兜底**：当飞书插件不支持 bot->bot 直派单时，自动切换人工中继（relay）
+- **一键改配置**：`quick-config.sh` 在开关+口令校验通过后，快速完成常见配置修改
 
 ---
 
@@ -89,6 +90,7 @@ python scripts/main.py parse --message '@代码虾 #TASK-20260318-001 ASSIGN 写
 python scripts/main.py route --content '帮我写一个Python脚本抓取网页' --workers-json '[{"name":"代码虾","capabilities":["代码","Python"],"load":1,"status":"online","success_rate":0.95}]'
 python scripts/main.py dispatch --content '写一个消息去重脚本' --sender-type bot --dispatch-mode auto --operator-name '路飞船长' --workers-json '[{"name":"秦隆","user_id":"ou_xxx","capabilities":["代码","Python"],"load":1,"status":"online","success_rate":0.95}]'
 python scripts/main.py admin-install-task --target '安装虾' --mode update --allow-network
+python scripts/main.py quick-config-task --target '安装虾' --quick-action relay-safe --token '虾改配置'
 ```
 
 ---
@@ -127,6 +129,40 @@ bash scripts/managed-install.sh --mode update --allow-network --yes
 
 ---
 
+## 给“安装虾”执行的一键改配置脚本
+
+脚本路径：
+
+- `scripts/quick-config.sh`
+
+执行前安全检查：
+
+- `admin_quick_ops.enabled` 必须为 `true`
+- 如启用口令校验，`--token` 必须命中 `admin_quick_ops.tokens`
+- 动作必须在 `admin_quick_ops.allowed_actions` 白名单中
+
+先在 `config.local.json` 开启：
+
+```json
+"admin_quick_ops": {
+  "enabled": true,
+  "require_token": true,
+  "tokens": ["虾改配置"],
+  "allowed_actions": ["status", "relay-safe", "direct-on", "role-scheduler", "role-executor", "set-chat-id"]
+}
+```
+
+常用动作：
+
+```bash
+bash scripts/quick-config.sh --action status --token '虾改配置'
+bash scripts/quick-config.sh --action relay-safe --token '虾改配置'
+bash scripts/quick-config.sh --action role-executor --token '虾改配置'
+bash scripts/quick-config.sh --action set-chat-id --chat-id 'oc_xxx' --token '虾改配置'
+```
+
+---
+
 ## 目录结构
 
 ```text
@@ -136,7 +172,8 @@ bash scripts/managed-install.sh --mode update --allow-network --yes
 ├── scripts/
 │   ├── main.py
 │   ├── install.sh
-│   └── managed-install.sh
+│   ├── managed-install.sh
+│   └── quick-config.sh
 ├── references/
 │   ├── protocol-contract.md
 │   └── implementation-notes.md
@@ -157,4 +194,4 @@ bash scripts/managed-install.sh --mode update --allow-network --yes
 
 ## 版本
 
-当前版本：`0.1.0`
+当前版本：`0.2.0`

@@ -15,6 +15,7 @@ Notes:
 
 - `ASSIGN`: scheduler -> executor
 - `ADMIN_INSTALL`: scheduler -> installer-admin (specialized install/update operation, should use managed-install.sh)
+- `ADMIN_QUICK_CONFIG`: scheduler -> installer-admin (guarded quick config operation, should use quick-config.sh)
 - `ACCEPT`: executor -> scheduler
 - `REJECT`: executor -> scheduler
 - `PROGRESS`: executor -> scheduler (and optionally user)
@@ -45,6 +46,7 @@ Exception branches:
 - Privileged operation:
   - `ADMIN_INSTALL` must only be handled by installer-admin role.
   - always run dry-run first, then explicit confirmation execution.
+  - `ADMIN_QUICK_CONFIG` must pass `enabled/token/allowed_actions` checks before applying changes.
 - Timeout:
   - accept timeout => reassignment
   - execution timeout => query + optional retry/escalation

@@ -1,6 +1,6 @@
 ---
 name: feishu-group-scheduler-executor
-version: 0.1.0
+version: 0.2.0
 description: "OpenClaw 飞书群聊多机器人协作技能：统一协议支持调度者与执行者在同一群内进行任务分发、执行回报、状态追踪和故障恢复。"
 author: "hongchen"
 license: "MIT"
@@ -20,6 +20,8 @@ capabilities:
     description: "当飞书插件限制 bot->bot 派单时，自动切换到人工中继模式"
   - id: managed-skill-install
     description: "提供受控安装/更新脚本（dry-run + 显式确认）供管理员角色调度执行"
+  - id: quick-config-ops
+    description: "提供带开关检查+口令校验的一键配置脚本，支持简短口令触发常用改配动作"
 
 permissions:
   network: true
@@ -177,6 +179,27 @@ minOpenClawVersion: "2.1.0"
 
 `python scripts/main.py admin-install-task --target '安装虾' --mode update --allow-network`
 
+### 7) 管理任务（一键改配置）
+
+先在 `config.local.json` 开启快速管理入口（默认关闭）：
+
+```json
+"admin_quick_ops": {
+  "enabled": true,
+  "require_token": true,
+  "tokens": ["虾改配置"],
+  "allowed_actions": ["status", "relay-safe", "direct-on", "role-scheduler", "role-executor", "set-chat-id"]
+}
+```
+
+再执行一键口令动作（执行前会强制检查 enabled + token + allowed_actions）：
+
+`bash scripts/quick-config.sh --action relay-safe --token '虾改配置'`
+
+也可由调度者先生成协议消息：
+
+`python scripts/main.py quick-config-task --target '安装虾' --quick-action relay-safe --token '虾改配置'`
+
 ## Notes
 ### 任务状态机
 
@@ -201,6 +224,7 @@ minOpenClawVersion: "2.1.0"
 - 对自然语言入口做最小化意图识别，不允许无 ID 的隐式状态改写。
 - 当插件不消费 bot 消息时，不应继续“等待执行者响应”，而应进入 `waiting_relay`。
 - shell 权限仅用于 `scripts/managed-install.sh` 这类受控运维动作，禁止远程脚本直执（如 `curl | bash`）。
+- `scripts/quick-config.sh` 执行前必须通过 `admin_quick_ops.enabled=true` 检查，且命中口令与允许动作白名单。
 
 ### 输出约定
 
@@ -235,4 +259,6 @@ python scripts/main.py parse --message '@代码虾 #TASK-20260318-001 ASSIGN 写
 python scripts/main.py route --content '写个 Python 采集脚本' --workers-json '[{"name":"代码虾","capabilities":["代码","Python"],"load":1,"status":"online","success_rate":0.95}]'
 python scripts/main.py dispatch --content '写一个消息去重脚本' --sender-type bot --dispatch-mode auto --operator-name '路飞船长' --workers-json '[{"name":"秦隆","user_id":"ou_xxx","capabilities":["代码","Python"],"load":1,"status":"online","success_rate":0.95}]'
 python scripts/main.py admin-install-task --target '安装虾' --mode update --allow-network
+python scripts/main.py quick-config-task --target '安装虾' --quick-action relay-safe --token '虾改配置'
+bash scripts/quick-config.sh --action status --token '虾改配置'
 ```

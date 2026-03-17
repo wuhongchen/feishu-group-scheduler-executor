@@ -53,6 +53,7 @@ if [[ ! -f "${CONFIG_PATH}" && -f "${TEMPLATE_PATH}" ]]; then
 fi
 
 chmod +x "${TARGET_DIR}/scripts/main.py" || true
+chmod +x "${TARGET_DIR}/scripts/quick-config.sh" || true
 
 echo ""
 echo "[done] ${SKILL_NAME} installed"

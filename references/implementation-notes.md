@@ -14,6 +14,7 @@ The baseline command set is aligned with the existing OpenClaw multi-bot pattern
 For skill operations, add one privileged command:
 
 `ADMIN_INSTALL` (scheduler -> installer-admin)
+`ADMIN_QUICK_CONFIG` (scheduler -> installer-admin)
 
 ## Recommended runtime contract
 
@@ -23,6 +24,7 @@ For skill operations, add one privileged command:
 4. Executor should emit `PROGRESS` at predictable checkpoints (0/25/50/75/100).
 5. Use thread reply in group chat when available to reduce context collision.
 6. Installer-admin should only execute `scripts/managed-install.sh` with explicit flags, never `curl | bash`.
+7. For quick config, run `scripts/quick-config.sh`; enforce `enabled + token + allowed_actions` before any write.
 
 ## Migration strategy (from existing shrimp-team-protocol)
 

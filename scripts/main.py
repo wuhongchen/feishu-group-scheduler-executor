@@ -4,6 +4,7 @@
 import argparse
 import json
 import re
+import shlex
 import sys
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -231,6 +232,48 @@ def build_admin_install_task(
     }
 
 
+def build_quick_config_task(
+    target: str,
+    quick_action: str,
+    token: str,
+    task_id: str = "",
+    target_id: str = "",
+    config_path: str = "",
+    chat_id: str = "",
+) -> Dict[str, Any]:
+    task_id = task_id or create_task_id("ADMIN")
+    cmd_parts = [
+        "bash",
+        "scripts/quick-config.sh",
+        "--action",
+        quick_action,
+    ]
+    if token:
+        cmd_parts.extend(["--token", token])
+    if config_path:
+        cmd_parts.extend(["--config", config_path])
+    if chat_id:
+        cmd_parts.extend(["--chat-id", chat_id])
+    cmd = " ".join(shlex.quote(part) for part in cmd_parts)
+    content = f"ADMIN_QUICK_CONFIG(口令操作) 执行 `{cmd}` 并回传结果"
+    message = format_message(
+        target=target,
+        task_id=task_id,
+        command="ASSIGN",
+        content=content,
+        tags=["admin_quick", "skill_ops"],
+        target_id=target_id,
+    )
+    return {
+        "ok": True,
+        "task_id": task_id,
+        "action": "admin_quick_config_assign",
+        "outbound_messages": [message],
+        "run_command": cmd,
+        "quick_action": quick_action,
+    }
+
+
 def output(payload: Dict[str, Any], exit_code: int = 0) -> int:
     print(json.dumps(payload, ensure_ascii=False, indent=2))
     return exit_code
@@ -274,6 +317,19 @@ def main() -> int:
     admin_install.add_argument("--task-id", default="")
     admin_install.add_argument("--mode", choices=["install", "update"], default="update")
     admin_install.add_argument("--allow-network", action="store_true")
+
+    quick_cfg = sub.add_parser("quick-config-task", help="Build protocol task for quick config action")
+    quick_cfg.add_argument("--target", default="安装虾")
+    quick_cfg.add_argument("--target-id", default="")
+    quick_cfg.add_argument("--task-id", default="")
+    quick_cfg.add_argument(
+        "--quick-action",
+        required=True,
+        choices=["status", "relay-safe", "direct-on", "role-scheduler", "role-executor", "set-chat-id"],
+    )
+    quick_cfg.add_argument("--token", default="")
+    quick_cfg.add_argument("--config-path", default="")
+    quick_cfg.add_argument("--chat-id", default="")
 
     args = parser.parse_args()
 
@@ -338,6 +394,20 @@ def main() -> int:
             target_id=args.target_id,
             mode=args.mode,
             allow_network=args.allow_network,
+        )
+        return output(plan)
+
+    if args.action == "quick-config-task":
+        if args.quick_action == "set-chat-id" and not args.chat_id:
+            return output({"ok": False, "error": "chat_id_required_for_set_chat_id"}, exit_code=1)
+        plan = build_quick_config_task(
+            target=args.target,
+            quick_action=args.quick_action,
+            token=args.token,
+            task_id=args.task_id,
+            target_id=args.target_id,
+            config_path=args.config_path,
+            chat_id=args.chat_id,
         )
         return output(plan)
 

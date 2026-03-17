@@ -22,6 +22,21 @@
       "user_id": "ou_operator_xxx"
     }
   },
+  "admin_quick_ops": {
+    "enabled": false,
+    "require_token": true,
+    "tokens": [
+      "虾改配置"
+    ],
+    "allowed_actions": [
+      "status",
+      "relay-safe",
+      "direct-on",
+      "role-scheduler",
+      "role-executor",
+      "set-chat-id"
+    ]
+  },
   "workers": {
     "load_balance": "best_score",
     "pool": [
