@@ -14,6 +14,7 @@ Notes:
 ## Command semantics
 
 - `ASSIGN`: scheduler -> executor
+- `ADMIN_INSTALL`: scheduler -> installer-admin (specialized install/update operation, should use managed-install.sh)
 - `ACCEPT`: executor -> scheduler
 - `REJECT`: executor -> scheduler
 - `PROGRESS`: executor -> scheduler (and optionally user)
@@ -41,6 +42,9 @@ Exception branches:
 
 - Invalid protocol line: ignore and optionally reply with usage hint.
 - Invalid transition: return structured error, keep original state.
+- Privileged operation:
+  - `ADMIN_INSTALL` must only be handled by installer-admin role.
+  - always run dry-run first, then explicit confirmation execution.
 - Timeout:
   - accept timeout => reassignment
   - execution timeout => query + optional retry/escalation

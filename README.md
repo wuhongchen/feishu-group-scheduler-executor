@@ -56,6 +56,12 @@
 bash <(curl -fsSL https://raw.githubusercontent.com/wuhongchen/feishu-group-scheduler-executor/main/scripts/install.sh)
 ```
 
+如果是让机器人执行安装/更新，优先使用受控脚本（避免 `curl | bash`）：
+
+```bash
+bash scripts/managed-install.sh --mode update --allow-network --yes
+```
+
 可选环境变量：
 
 - `OPENCLAW_SKILLS_DIR`：自定义 skills 安装目录
@@ -82,6 +88,7 @@ python scripts/main.py create-id
 python scripts/main.py parse --message '@代码虾 #TASK-20260318-001 ASSIGN 写个脚本 #代码'
 python scripts/main.py route --content '帮我写一个Python脚本抓取网页' --workers-json '[{"name":"代码虾","capabilities":["代码","Python"],"load":1,"status":"online","success_rate":0.95}]'
 python scripts/main.py dispatch --content '写一个消息去重脚本' --sender-type bot --dispatch-mode auto --operator-name '路飞船长' --workers-json '[{"name":"秦隆","user_id":"ou_xxx","capabilities":["代码","Python"],"load":1,"status":"online","success_rate":0.95}]'
+python scripts/main.py admin-install-task --target '安装虾' --mode update --allow-network
 ```
 
 ---
@@ -100,6 +107,26 @@ python scripts/main.py dispatch --content '写一个消息去重脚本' --sender
 
 ---
 
+## 给“安装虾”执行的受控安装脚本
+
+为了避免 `curl | bash` 被模型判定为高风险，skill 内提供本地受控脚本：
+
+- `scripts/managed-install.sh`
+
+特点：
+
+- 默认 **dry-run**，必须显式 `--yes` 才执行
+- 必须显式 `--allow-network` 才会拉取远端仓库
+- 只处理当前 skill 安装目录，不执行任意外部脚本
+
+执行示例：
+
+```bash
+bash scripts/managed-install.sh --mode update --allow-network --yes
+```
+
+---
+
 ## 目录结构
 
 ```text
@@ -107,7 +134,9 @@ python scripts/main.py dispatch --content '写一个消息去重脚本' --sender
 ├── SKILL.md
 ├── README.md
 ├── scripts/
-│   └── main.py
+│   ├── main.py
+│   ├── install.sh
+│   └── managed-install.sh
 ├── references/
 │   ├── protocol-contract.md
 │   └── implementation-notes.md

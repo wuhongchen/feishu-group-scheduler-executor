@@ -18,6 +18,8 @@ capabilities:
     description: "支持话题回复和常规回复策略，避免多机器人群聊串线"
   - id: bot-relay-fallback
     description: "当飞书插件限制 bot->bot 派单时，自动切换到人工中继模式"
+  - id: managed-skill-install
+    description: "提供受控安装/更新脚本（dry-run + 显式确认）供管理员角色调度执行"
 
 permissions:
   network: true
@@ -165,6 +167,16 @@ minOpenClawVersion: "2.1.0"
 - `dispatch_mode=direct`：强制直派（要求插件允许 bot->bot）
 - `dispatch_mode=relay`：强制人工中继（生成可转发协议消息）
 
+### 6) 管理任务（安装/更新）
+
+可通过本地受控脚本执行 skill 安装/更新（避免远程脚本直执）：
+
+`bash scripts/managed-install.sh --mode update --allow-network --yes`
+
+也可由调度者先生成管理任务协议消息：
+
+`python scripts/main.py admin-install-task --target '安装虾' --mode update --allow-network`
+
 ## Notes
 ### 任务状态机
 
@@ -208,10 +220,10 @@ minOpenClawVersion: "2.1.0"
 - 飞书开放平台应用（机器人能力、消息读取/发送权限）
 - 推荐将配置放在 `templates/skill-config.template.json` 的衍生文件中
 
-一键安装：
+推荐安装/更新（受控执行）：
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/wuhongchen/feishu-group-scheduler-executor/main/scripts/install.sh)
+bash scripts/managed-install.sh --mode update --allow-network --yes
 ```
 
 示例命令（本地协议演示脚本）：
@@ -221,4 +233,5 @@ python scripts/main.py create-id
 python scripts/main.py parse --message '@代码虾 #TASK-20260318-001 ASSIGN 写个脚本 #代码'
 python scripts/main.py route --content '写个 Python 采集脚本' --workers-json '[{"name":"代码虾","capabilities":["代码","Python"],"load":1,"status":"online","success_rate":0.95}]'
 python scripts/main.py dispatch --content '写一个消息去重脚本' --sender-type bot --dispatch-mode auto --operator-name '路飞船长' --workers-json '[{"name":"秦隆","user_id":"ou_xxx","capabilities":["代码","Python"],"load":1,"status":"online","success_rate":0.95}]'
+python scripts/main.py admin-install-task --target '安装虾' --mode update --allow-network
 ```

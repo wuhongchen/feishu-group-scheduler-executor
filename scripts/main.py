@@ -201,6 +201,36 @@ def build_dispatch_plan(
     }
 
 
+def build_admin_install_task(
+    target: str,
+    task_id: str = "",
+    target_id: str = "",
+    mode: str = "update",
+    allow_network: bool = True,
+) -> Dict[str, Any]:
+    task_id = task_id or create_task_id("ADMIN")
+    cmd = "bash scripts/managed-install.sh"
+    cmd += f" --mode {mode}"
+    if allow_network:
+        cmd += " --allow-network"
+    cmd += " --yes"
+    message = format_message(
+        target=target,
+        task_id=task_id,
+        command="ASSIGN",
+        content=f"ADMIN_INSTALL(安装管理员职责) 执行 `{cmd}` 并回传日志摘要",
+        tags=["admin_install", "skill_ops"],
+        target_id=target_id,
+    )
+    return {
+        "ok": True,
+        "task_id": task_id,
+        "action": "admin_install_assign",
+        "outbound_messages": [message],
+        "run_command": cmd,
+    }
+
+
 def output(payload: Dict[str, Any], exit_code: int = 0) -> int:
     print(json.dumps(payload, ensure_ascii=False, indent=2))
     return exit_code
@@ -237,6 +267,13 @@ def main() -> int:
     dispatch.add_argument("--operator-name", default="值班同学")
     dispatch.add_argument("--operator-id", default="")
     dispatch.add_argument("--tags", default="")
+
+    admin_install = sub.add_parser("admin-install-task", help="Build protocol task for managed skill install/update")
+    admin_install.add_argument("--target", default="安装虾")
+    admin_install.add_argument("--target-id", default="")
+    admin_install.add_argument("--task-id", default="")
+    admin_install.add_argument("--mode", choices=["install", "update"], default="update")
+    admin_install.add_argument("--allow-network", action="store_true")
 
     args = parser.parse_args()
 
@@ -293,6 +330,16 @@ def main() -> int:
         )
         exit_code = 0 if plan.get("ok") else 1
         return output(plan, exit_code=exit_code)
+
+    if args.action == "admin-install-task":
+        plan = build_admin_install_task(
+            target=args.target,
+            task_id=args.task_id,
+            target_id=args.target_id,
+            mode=args.mode,
+            allow_network=args.allow_network,
+        )
+        return output(plan)
 
     return output({"ok": False, "error": "unknown_action"}, exit_code=1)
 

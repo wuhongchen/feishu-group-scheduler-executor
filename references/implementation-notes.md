@@ -11,6 +11,10 @@ The baseline command set is aligned with the existing OpenClaw multi-bot pattern
 
 `ASSIGN, ACCEPT, REJECT, PROGRESS, DONE, REVIEW, PASS, FAIL, RETRY, ARCHIVE, CANCEL, QUERY, PING`
 
+For skill operations, add one privileged command:
+
+`ADMIN_INSTALL` (scheduler -> installer-admin)
+
 ## Recommended runtime contract
 
 1. Every task mutation must include `task_id`.
@@ -18,6 +22,7 @@ The baseline command set is aligned with the existing OpenClaw multi-bot pattern
 3. Scheduler must not reassign without recording previous assignee + reason.
 4. Executor should emit `PROGRESS` at predictable checkpoints (0/25/50/75/100).
 5. Use thread reply in group chat when available to reduce context collision.
+6. Installer-admin should only execute `scripts/managed-install.sh` with explicit flags, never `curl | bash`.
 
 ## Migration strategy (from existing shrimp-team-protocol)
 
