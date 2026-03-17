@@ -131,6 +131,76 @@ def route_worker(content: str, workers: List[Dict[str, Any]]) -> Dict[str, Any]:
     }
 
 
+def build_dispatch_plan(
+    content: str,
+    workers: List[Dict[str, Any]],
+    task_id: str = "",
+    sender_type: str = "human",
+    dispatch_mode: str = "auto",
+    operator_name: str = "值班同学",
+    operator_id: str = "",
+    extra_tags: Optional[List[str]] = None,
+) -> Dict[str, Any]:
+    decision = route_worker(content, workers)
+    selected = decision.get("selected")
+    required_capability = decision.get("required_capability", "通用")
+    if not selected:
+        return {
+            "ok": False,
+            "action": "no_candidate",
+            "reason": "no_available_worker",
+            "routing_decision": decision,
+            "outbound_messages": [],
+        }
+
+    task_id = task_id or create_task_id()
+    tags = [required_capability] + (extra_tags or [])
+    assign_message = format_message(
+        target=selected["name"],
+        task_id=task_id,
+        command="ASSIGN",
+        content=content,
+        tags=tags,
+        target_id=selected.get("user_id", ""),
+    )
+
+    if dispatch_mode == "direct":
+        mode = "direct"
+    elif dispatch_mode == "relay":
+        mode = "relay"
+    else:
+        mode = "relay" if sender_type == "bot" else "direct"
+
+    if mode == "direct":
+        return {
+            "ok": True,
+            "action": "dispatch_direct",
+            "task_id": task_id,
+            "routing_decision": decision,
+            "outbound_messages": [assign_message],
+            "next_status": "waiting_executor",
+        }
+
+    relay_target = f'<at user_id="{operator_id}"></at>' if operator_id else f"@{operator_name}"
+    relay_message = (
+        f"{relay_target} 当前飞书插件限制 bot->bot 直派单，请代转以下协议消息给执行者：\n"
+        f"{assign_message}"
+    )
+    return {
+        "ok": True,
+        "action": "dispatch_relay",
+        "task_id": task_id,
+        "routing_decision": decision,
+        "outbound_messages": [relay_message],
+        "relay_payload": assign_message,
+        "next_status": "waiting_relay",
+        "relay_operator": {
+            "name": operator_name,
+            "user_id": operator_id,
+        },
+    }
+
+
 def output(payload: Dict[str, Any], exit_code: int = 0) -> int:
     print(json.dumps(payload, ensure_ascii=False, indent=2))
     return exit_code
@@ -157,6 +227,16 @@ def main() -> int:
     route = sub.add_parser("route", help="Route task to a worker")
     route.add_argument("--content", required=True)
     route.add_argument("--workers-json", required=True, help="JSON array of worker objects")
+
+    dispatch = sub.add_parser("dispatch", help="Build scheduler dispatch plan (direct/relay)")
+    dispatch.add_argument("--content", required=True)
+    dispatch.add_argument("--workers-json", required=True, help="JSON array of worker objects")
+    dispatch.add_argument("--task-id", default="")
+    dispatch.add_argument("--sender-type", choices=["human", "bot"], default="human")
+    dispatch.add_argument("--dispatch-mode", choices=["auto", "direct", "relay"], default="auto")
+    dispatch.add_argument("--operator-name", default="值班同学")
+    dispatch.add_argument("--operator-id", default="")
+    dispatch.add_argument("--tags", default="")
 
     args = parser.parse_args()
 
@@ -191,6 +271,28 @@ def main() -> int:
 
         decision = route_worker(args.content, workers)
         return output({"ok": True, "decision": decision})
+
+    if args.action == "dispatch":
+        try:
+            workers = json.loads(args.workers_json)
+            if not isinstance(workers, list):
+                raise ValueError("workers-json must be a JSON array")
+        except Exception as exc:  # noqa: BLE001
+            return output({"ok": False, "error": f"invalid_workers_json: {exc}"}, exit_code=1)
+
+        tags = [tag.strip() for tag in args.tags.split(",") if tag.strip()]
+        plan = build_dispatch_plan(
+            content=args.content,
+            workers=workers,
+            task_id=args.task_id,
+            sender_type=args.sender_type,
+            dispatch_mode=args.dispatch_mode,
+            operator_name=args.operator_name,
+            operator_id=args.operator_id,
+            extra_tags=tags,
+        )
+        exit_code = 0 if plan.get("ok") else 1
+        return output(plan, exit_code=exit_code)
 
     return output({"ok": False, "error": "unknown_action"}, exit_code=1)
 

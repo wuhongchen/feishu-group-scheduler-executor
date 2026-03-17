@@ -16,6 +16,8 @@ capabilities:
     description: "管理任务状态机、重试、超时处理和归档回执"
   - id: feishu-thread-safe-reply
     description: "支持话题回复和常规回复策略，避免多机器人群聊串线"
+  - id: bot-relay-fallback
+    description: "当飞书插件限制 bot->bot 派单时，自动切换到人工中继模式"
 
 permissions:
   network: true
@@ -63,6 +65,26 @@ inputs:
     required: false
     default: "thread"
     description: "回复模式：thread 或 normal"
+  - name: sender_type
+    type: string
+    required: false
+    default: "human"
+    description: "发送者类型：human 或 bot（用于判断是否需要中继）"
+  - name: dispatch_mode
+    type: string
+    required: false
+    default: "auto"
+    description: "派单模式：auto / direct / relay"
+  - name: relay_operator_name
+    type: string
+    required: false
+    default: "值班同学"
+    description: "中继模式下负责转发协议消息的人类操作者名称"
+  - name: relay_operator_id
+    type: string
+    required: false
+    default: ""
+    description: "中继操作者的飞书 user_id"
 
 outputs:
   - name: outbound_messages
@@ -77,6 +99,9 @@ outputs:
   - name: execution_signal
     type: object
     description: "执行者侧动作信号（accept/reject/start/progress/done/error）"
+  - name: relay_plan
+    type: object
+    description: "中继派单计划（relay_payload、relay_operator、waiting_relay）"
 
 tags: ["openclaw", "feishu", "group-chat", "multi-agent", "scheduler", "executor"]
 minOpenClawVersion: "2.1.0"
@@ -132,6 +157,14 @@ minOpenClawVersion: "2.1.0"
 - `reply_mode=thread`：优先在原话题下回复，降低群噪声与串线风险。
 - `reply_mode=normal`：普通群消息回复（兼容未启用 thread 的环境）。
 
+### 5) 派单模式（解决 bot->bot 受限）
+
+- `dispatch_mode=auto`：
+  - `sender_type=human` 时直派（direct）
+  - `sender_type=bot` 时中继（relay）
+- `dispatch_mode=direct`：强制直派（要求插件允许 bot->bot）
+- `dispatch_mode=relay`：强制人工中继（生成可转发协议消息）
+
 ## Notes
 ### 任务状态机
 
@@ -154,6 +187,7 @@ minOpenClawVersion: "2.1.0"
 - 所有群内动作必须带 `task_id`，避免多机器人并发时上下文漂移。
 - 对执行者使用真实 `user_id` 的 `<at ...>`，避免“看见消息但未收到提醒”。
 - 对自然语言入口做最小化意图识别，不允许无 ID 的隐式状态改写。
+- 当插件不消费 bot 消息时，不应继续“等待执行者响应”，而应进入 `waiting_relay`。
 
 ### 输出约定
 
@@ -180,4 +214,5 @@ minOpenClawVersion: "2.1.0"
 python scripts/main.py create-id
 python scripts/main.py parse --message '@代码虾 #TASK-20260318-001 ASSIGN 写个脚本 #代码'
 python scripts/main.py route --content '写个 Python 采集脚本' --workers-json '[{"name":"代码虾","capabilities":["代码","Python"],"load":1,"status":"online","success_rate":0.95}]'
+python scripts/main.py dispatch --content '写一个消息去重脚本' --sender-type bot --dispatch-mode auto --operator-name '路飞船长' --workers-json '[{"name":"秦隆","user_id":"ou_xxx","capabilities":["代码","Python"],"load":1,"status":"online","success_rate":0.95}]'
 ```

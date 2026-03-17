@@ -14,6 +14,14 @@
     "app_secret_env": "FEISHU_APP_SECRET",
     "reply_mode": "thread"
   },
+  "plugin_constraints": {
+    "bot_to_bot_dispatch": false,
+    "dispatch_mode": "auto",
+    "relay_operator": {
+      "name": "值班同学",
+      "user_id": "ou_operator_xxx"
+    }
+  },
   "workers": {
     "load_balance": "best_score",
     "pool": [

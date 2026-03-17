@@ -26,6 +26,7 @@
 - **路由策略**：按能力匹配 + 在线状态 + 负载 + 成功率选择执行者
 - **容错机制**：超时重分配、失败重试、取消与归档
 - **群聊治理**：支持 thread 回复策略，减少消息噪声
+- **插件受限兜底**：当飞书插件不支持 bot->bot 直派单时，自动切换人工中继（relay）
 
 ---
 
@@ -60,6 +61,7 @@
 - `identity.role`：`scheduler` 或 `executor`
 - `feishu.chat_id`
 - 执行者池 `workers.pool`（名称、user_id、能力、负载、成功率）
+- 插件约束 `plugin_constraints.bot_to_bot_dispatch`（是否允许 bot 直派 bot）
 
 ### 2) 本地协议工具（演示）
 
@@ -67,7 +69,22 @@
 python scripts/main.py create-id
 python scripts/main.py parse --message '@代码虾 #TASK-20260318-001 ASSIGN 写个脚本 #代码'
 python scripts/main.py route --content '帮我写一个Python脚本抓取网页' --workers-json '[{"name":"代码虾","capabilities":["代码","Python"],"load":1,"status":"online","success_rate":0.95}]'
+python scripts/main.py dispatch --content '写一个消息去重脚本' --sender-type bot --dispatch-mode auto --operator-name '路飞船长' --workers-json '[{"name":"秦隆","user_id":"ou_xxx","capabilities":["代码","Python"],"load":1,"status":"online","success_rate":0.95}]'
 ```
+
+---
+
+## 飞书插件限制说明（重点）
+
+在部分飞书/OpenClaw 插件配置下，机器人消息不会触发另一个机器人（即 bot->bot 指令不会被消费）。
+
+本技能提供三种派单模式：
+
+- `direct`：强制直派（需要插件允许）
+- `relay`：强制人工中继（让指定人类转发协议消息）
+- `auto`：自动判断；若发送者是 bot，则走 relay
+
+当进入 relay 模式时，调度者不会继续“等待执行者响应”，而是进入 `waiting_relay` 状态并输出可转发 payload。
 
 ---
 
