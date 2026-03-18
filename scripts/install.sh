@@ -54,6 +54,7 @@ fi
 
 chmod +x "${TARGET_DIR}/scripts/main.py" || true
 chmod +x "${TARGET_DIR}/scripts/quick-config.sh" || true
+chmod +x "${TARGET_DIR}/scripts/start-user-proxy.sh" || true
 
 echo ""
 echo "[done] ${SKILL_NAME} installed"

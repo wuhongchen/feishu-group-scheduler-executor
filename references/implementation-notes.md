@@ -16,6 +16,12 @@ For skill operations, add one privileged command:
 `ADMIN_INSTALL` (scheduler -> installer-admin)
 `ADMIN_QUICK_CONFIG` (scheduler -> installer-admin)
 
+For blocked bot->bot scenarios, prefer `user_proxy` dispatch:
+
+- use `feishu_im_user_message.send` with sender's `user_access_token`
+- send `<at user_id=\"executor_open_id\">` in group chat
+- fallback to relay when token unavailable
+
 ## Recommended runtime contract
 
 1. Every task mutation must include `task_id`.
@@ -25,6 +31,7 @@ For skill operations, add one privileged command:
 5. Use thread reply in group chat when available to reduce context collision.
 6. Installer-admin should only execute `scripts/managed-install.sh` with explicit flags, never `curl | bash`.
 7. For quick config, run `scripts/quick-config.sh`; enforce `enabled + token + allowed_actions` before any write.
+8. Keep auditable records for proxy sends: `task_id`, `sender_open_id`, `target_executor`.
 
 ## Migration strategy (from existing shrimp-team-protocol)
 

@@ -1,6 +1,6 @@
 ---
 name: feishu-group-scheduler-executor
-version: 0.2.0
+version: 0.3.0
 description: "OpenClaw 飞书群聊多机器人协作技能：统一协议支持调度者与执行者在同一群内进行任务分发、执行回报、状态追踪和故障恢复。"
 author: "hongchen"
 license: "MIT"
@@ -22,6 +22,10 @@ capabilities:
     description: "提供受控安装/更新脚本（dry-run + 显式确认）供管理员角色调度执行"
   - id: quick-config-ops
     description: "提供带开关检查+口令校验的一键配置脚本，支持简短口令触发常用改配动作"
+  - id: user-proxy-dispatch
+    description: "调度者可用发起用户的 user_access_token 代发 @执行者 消息，突破 bot->bot 事件不投递限制"
+  - id: one-click-user-proxy-start
+    description: "一键启动脚本自动启用 user_proxy 调度并写入基础配置"
 
 permissions:
   network: true
@@ -89,6 +93,16 @@ inputs:
     required: false
     default: ""
     description: "中继操作者的飞书 user_id"
+  - name: sender_open_id
+    type: string
+    required: false
+    default: ""
+    description: "发起用户 open_id（user_proxy 模式必须）"
+  - name: chat_id
+    type: string
+    required: false
+    default: ""
+    description: "目标群 chat_id（user_proxy 模式必须）"
 
 outputs:
   - name: outbound_messages
@@ -106,6 +120,9 @@ outputs:
   - name: relay_plan
     type: object
     description: "中继派单计划（relay_payload、relay_operator、waiting_relay）"
+  - name: tool_call
+    type: object
+    description: "user_proxy 模式下建议调用的工具参数（feishu_im_user_message.send）"
 
 tags: ["openclaw", "feishu", "group-chat", "multi-agent", "scheduler", "executor"]
 minOpenClawVersion: "2.1.0"
@@ -168,6 +185,7 @@ minOpenClawVersion: "2.1.0"
   - `sender_type=bot` 时中继（relay）
 - `dispatch_mode=direct`：强制直派（要求插件允许 bot->bot）
 - `dispatch_mode=relay`：强制人工中继（生成可转发协议消息）
+- `dispatch_mode=user_proxy`：使用发起用户 token 代发 `@执行者`（推荐）
 
 ### 6) 管理任务（安装/更新）
 
@@ -200,6 +218,18 @@ minOpenClawVersion: "2.1.0"
 
 `python scripts/main.py quick-config-task --target '安装虾' --quick-action relay-safe --token '虾改配置'`
 
+### 8) 一键启动 user_proxy
+
+```bash
+bash scripts/start-user-proxy.sh --chat-id oc_xxx
+```
+
+该脚本会自动：
+- 生成/更新 `config.local.json`
+- 设置 `dispatch_mode=user_proxy`
+- 启用 `user_proxy.enabled=true`
+- 配置 relay 回退参数
+
 ## Notes
 ### 任务状态机
 
@@ -225,6 +255,7 @@ minOpenClawVersion: "2.1.0"
 - 当插件不消费 bot 消息时，不应继续“等待执行者响应”，而应进入 `waiting_relay`。
 - shell 权限仅用于 `scripts/managed-install.sh` 这类受控运维动作，禁止远程脚本直执（如 `curl | bash`）。
 - `scripts/quick-config.sh` 执行前必须通过 `admin_quick_ops.enabled=true` 检查，且命中口令与允许动作白名单。
+- `user_proxy` 必须使用发起用户已授权的 `user_access_token`，并保留审计日志（task_id / sender_open_id / target_bot）。
 
 ### 输出约定
 
@@ -260,5 +291,7 @@ python scripts/main.py route --content '写个 Python 采集脚本' --workers-js
 python scripts/main.py dispatch --content '写一个消息去重脚本' --sender-type bot --dispatch-mode auto --operator-name '路飞船长' --workers-json '[{"name":"秦隆","user_id":"ou_xxx","capabilities":["代码","Python"],"load":1,"status":"online","success_rate":0.95}]'
 python scripts/main.py admin-install-task --target '安装虾' --mode update --allow-network
 python scripts/main.py quick-config-task --target '安装虾' --quick-action relay-safe --token '虾改配置'
+python scripts/main.py dispatch-user-proxy --content '搜索 openclaw feishu plugin 最新资讯' --chat-id 'oc_xxx' --sender-open-id 'ou_user_xxx' --workers-json '[{"name":"秦隆","user_id":"ou_xxx","capabilities":["搜索","代码","通用"],"load":1,"status":"online","success_rate":0.95}]'
+bash scripts/start-user-proxy.sh --chat-id oc_xxx
 bash scripts/quick-config.sh --action status --token '虾改配置'
 ```

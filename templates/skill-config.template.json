@@ -16,11 +16,19 @@
   },
   "plugin_constraints": {
     "bot_to_bot_dispatch": false,
-    "dispatch_mode": "auto",
+    "dispatch_mode": "user_proxy",
     "relay_operator": {
       "name": "值班同学",
       "user_id": "ou_operator_xxx"
     }
+  },
+  "user_proxy": {
+    "enabled": true,
+    "mode": "send_as_user",
+    "tool_name": "feishu_im_user_message",
+    "require_user_token": true,
+    "prefix": "[代发]",
+    "fallback_mode": "relay"
   },
   "admin_quick_ops": {
     "enabled": false,

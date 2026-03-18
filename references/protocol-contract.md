@@ -16,6 +16,7 @@ Notes:
 - `ASSIGN`: scheduler -> executor
 - `ADMIN_INSTALL`: scheduler -> installer-admin (specialized install/update operation, should use managed-install.sh)
 - `ADMIN_QUICK_CONFIG`: scheduler -> installer-admin (guarded quick config operation, should use quick-config.sh)
+- `ASSIGN` (user_proxy): scheduler -> (send_as_user tool) -> executor
 - `ACCEPT`: executor -> scheduler
 - `REJECT`: executor -> scheduler
 - `PROGRESS`: executor -> scheduler (and optionally user)
@@ -47,6 +48,9 @@ Exception branches:
   - `ADMIN_INSTALL` must only be handled by installer-admin role.
   - always run dry-run first, then explicit confirmation execution.
   - `ADMIN_QUICK_CONFIG` must pass `enabled/token/allowed_actions` checks before applying changes.
+- user_proxy dispatch:
+  - requires valid `sender_open_id` + `chat_id` + target executor `user_id`.
+  - requires user token authorization (`send_as_user`); otherwise fallback to relay.
 - Timeout:
   - accept timeout => reassignment
   - execution timeout => query + optional retry/escalation

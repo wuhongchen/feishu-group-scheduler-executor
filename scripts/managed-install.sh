@@ -147,6 +147,7 @@ chmod +x "${TARGET_DIR}/scripts/main.py" || true
 chmod +x "${TARGET_DIR}/scripts/install.sh" || true
 chmod +x "${TARGET_DIR}/scripts/managed-install.sh" || true
 chmod +x "${TARGET_DIR}/scripts/quick-config.sh" || true
+chmod +x "${TARGET_DIR}/scripts/start-user-proxy.sh" || true
 
 echo "[done] ${SKILL_NAME} ${MODE} completed"
 echo "[next] edit ${CONFIG_PATH}"

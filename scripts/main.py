@@ -274,6 +274,84 @@ def build_quick_config_task(
     }
 
 
+def build_user_proxy_dispatch_plan(
+    content: str,
+    workers: List[Dict[str, Any]],
+    chat_id: str,
+    sender_open_id: str,
+    task_id: str = "",
+    prefix: str = "[代发]",
+    extra_tags: Optional[List[str]] = None,
+) -> Dict[str, Any]:
+    decision = route_worker(content, workers)
+    selected = decision.get("selected")
+    required_capability = decision.get("required_capability", "通用")
+    if not selected:
+        return {
+            "ok": False,
+            "action": "no_candidate",
+            "reason": "no_available_worker",
+            "routing_decision": decision,
+            "outbound_messages": [],
+        }
+
+    target_user_id = selected.get("user_id", "")
+    if not target_user_id:
+        return {
+            "ok": False,
+            "action": "invalid_worker",
+            "reason": "target_worker_user_id_missing",
+            "routing_decision": decision,
+            "outbound_messages": [],
+        }
+
+    task_id = task_id or create_task_id("DISPATCH")
+    tags = [required_capability] + (extra_tags or [])
+    tags_part = " ".join(f"#{tag}" for tag in tags)
+    mention = f'<at user_id="{target_user_id}">@{selected.get("name", "执行者")}</at>'
+    protocol_line = f"{mention} {task_id} ASSIGN {content} {tags_part}".strip()
+    proxy_text = f"{prefix} {protocol_line}".strip()
+
+    tool_call = {
+        "tool": "feishu_im_user_message",
+        "as": "user",
+        "sender_open_id": sender_open_id,
+        "params": {
+            "action": "send",
+            "receive_id_type": "chat_id",
+            "receive_id": chat_id,
+            "msg_type": "text",
+            "content": json.dumps({"text": proxy_text}, ensure_ascii=False),
+        },
+    }
+
+    return {
+        "ok": True,
+        "action": "dispatch_user_proxy",
+        "task_id": task_id,
+        "routing_decision": decision,
+        "user_proxy_message": proxy_text,
+        "tool_call": tool_call,
+        "next_status": "waiting_executor",
+        "notes": [
+            "需使用发起用户的 user_access_token 调用 feishu_im_user_message.send",
+            "若 user_access_token 不可用，请回退 relay 模式",
+        ],
+    }
+
+
+def build_one_click_start_command(chat_id: str, config_path: str = "") -> Dict[str, Any]:
+    cmd_parts = ["bash", "scripts/start-user-proxy.sh", "--chat-id", chat_id]
+    if config_path:
+        cmd_parts.extend(["--config", config_path])
+    command = " ".join(shlex.quote(part) for part in cmd_parts)
+    return {
+        "ok": True,
+        "action": "one_click_start",
+        "command": command,
+    }
+
+
 def output(payload: Dict[str, Any], exit_code: int = 0) -> int:
     print(json.dumps(payload, ensure_ascii=False, indent=2))
     return exit_code
@@ -330,6 +408,19 @@ def main() -> int:
     quick_cfg.add_argument("--token", default="")
     quick_cfg.add_argument("--config-path", default="")
     quick_cfg.add_argument("--chat-id", default="")
+
+    user_proxy = sub.add_parser("dispatch-user-proxy", help="Build user-proxy dispatch plan (send_as_user)")
+    user_proxy.add_argument("--content", required=True)
+    user_proxy.add_argument("--workers-json", required=True, help="JSON array of worker objects")
+    user_proxy.add_argument("--chat-id", required=True)
+    user_proxy.add_argument("--sender-open-id", required=True, help="original user open_id")
+    user_proxy.add_argument("--task-id", default="")
+    user_proxy.add_argument("--prefix", default="[代发]")
+    user_proxy.add_argument("--tags", default="")
+
+    start_cmd = sub.add_parser("one-click-start", help="Generate one-click start command")
+    start_cmd.add_argument("--chat-id", required=True)
+    start_cmd.add_argument("--config-path", default="")
 
     args = parser.parse_args()
 
@@ -409,6 +500,31 @@ def main() -> int:
             config_path=args.config_path,
             chat_id=args.chat_id,
         )
+        return output(plan)
+
+    if args.action == "dispatch-user-proxy":
+        try:
+            workers = json.loads(args.workers_json)
+            if not isinstance(workers, list):
+                raise ValueError("workers-json must be a JSON array")
+        except Exception as exc:  # noqa: BLE001
+            return output({"ok": False, "error": f"invalid_workers_json: {exc}"}, exit_code=1)
+
+        tags = [tag.strip() for tag in args.tags.split(",") if tag.strip()]
+        plan = build_user_proxy_dispatch_plan(
+            content=args.content,
+            workers=workers,
+            chat_id=args.chat_id,
+            sender_open_id=args.sender_open_id,
+            task_id=args.task_id,
+            prefix=args.prefix,
+            extra_tags=tags,
+        )
+        exit_code = 0 if plan.get("ok") else 1
+        return output(plan, exit_code=exit_code)
+
+    if args.action == "one-click-start":
+        plan = build_one_click_start_command(args.chat_id, args.config_path)
         return output(plan)
 
     return output({"ok": False, "error": "unknown_action"}, exit_code=1)
